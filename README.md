@@ -61,14 +61,16 @@ Download the signed extension from the latest release:
 <https://github.com/ROSINT-MIRROR/twitch-unslop/releases/latest/download/twitch-unslop.xpi>
 
 It is signed by Mozilla through the unlisted channel, so it installs on normal
-release Firefox: open that `.xpi` link in Firefox and accept the install prompt.
-After installing, the toolbar button opens the popup; open a Twitch channel and
-it runs its own donor pool.
+release Firefox. Opening the install link from rosint.org installs it in the
+same tab; Firefox may show its yellow permission bar once, with a "Continue to
+Installation" button — click it, then accept the install prompt. After
+installing, the toolbar button opens the popup; open a Twitch channel and it
+runs its own donor pool.
 
 Verify the download (release `v0.1.0`):
 
 ```
-sha256  23b64b3a90fea8d9d76f0fd6c3fbefad4d4888047b541106c6f295d62ba79623
+sha256  23b64b3a90fea8d9d76f0fd6c3fbefad4d4888047b541106c6f295d62ba79623  twitch-unslop.xpi
 ```
 
 No store listing is involved — the add-on is self-distributed, not published on
@@ -76,6 +78,29 @@ addons.mozilla.org. If you build your own unsigned `.xpi` with `ext/build.sh`
 instead, it only loads on Firefox Developer Edition / Nightly / unbranded-ESR
 with `xpinstall.signatures.required=false`, or temporarily via
 `about:debugging#/runtime/this-firefox` -> Load Temporary Add-on.
+
+## Install (Chrome)
+
+Chrome is **not a one-click install** off the Web Store, by design. Chrome only
+accepts a one-click `.crx` from its own Web Store, and we do not use the store.
+The supported direct path is Load unpacked:
+
+1. Download the zip:
+   <https://github.com/ROSINT-MIRROR/twitch-unslop/releases/latest/download/twitch-unslop-chrome.zip>
+2. Unzip it to a folder you keep (Chrome loads it from that path, so don't delete it).
+3. Open `chrome://extensions`.
+4. Turn on **Developer mode** (top right).
+5. Click **Load unpacked** and pick the unzipped folder (the one with `manifest.json`).
+
+Chrome shows a standing "Developer mode extensions" warning — that is expected
+for any non-store extension and is not an error. The Web Store is the only
+one-click route and is intentionally not used here, so there is no `.crx`.
+
+Verify the download (release `v0.1.0`):
+
+```
+sha256  d3614ea6e646923133cb498c6ec6553be2bee6f5f706bc3493eeb50ced4c4a46  twitch-unslop-chrome.zip
+```
 
 Passive browser tap (mitmproxy):
 
