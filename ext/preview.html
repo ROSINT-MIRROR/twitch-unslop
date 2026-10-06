@@ -1,0 +1,614 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Unslop — UI preview</title>
+<!-- Static mock of both surfaces for design review in a local browser.
+     Self-contained on purpose: no fetches, no CDN, nothing remote. Numbers are
+     the real 36-minute gaules soak, ext.log 16:31 -> 17:07:54:
+       media=851  served=726  pass=125  rebind=46  regrid=0  grid=4/4  segs=890
+       blocked=5brk/70seg  leaked=3brk/21seg  canary=48brk/48j  unk=0
+     Four midrolls landed in that window, roughly nine minutes apart. That build
+     had no segment listener and reported no flap count, so both of those read
+     "not measured" here — which is the point. -->
+<style>
+:root {
+  --void:#0e0d13; --panel:#17161f; --sunk:#121119; --line:#262436;
+  --ink:#e8e6f0; --mute:#8a869c; --faint:#565270;
+  --accent:#a78bfa; --ok:#5ee8a5; --warn:#ffb454; --bad:#ff5c5c;
+  --ok-dim:#163a2c; --warn-dim:#3a2c15; --bad-dim:#3a1a1e;
+  --sans: ui-sans-serif,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono: ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: light) {
+  :root { --void:#f7f6fb; --panel:#fff; --sunk:#f0eef7; --line:#e0dcec;
+    --ink:#1a1824; --mute:#625d78; --faint:#9a95b0; --accent:#6d43e8;
+    --ok:#0f9d63; --warn:#b06a00; --bad:#d63333;
+    --ok-dim:#d9f5e8; --warn-dim:#fbeed6; --bad-dim:#fbdede; }
+}
+:root[data-theme="light"] { --void:#f7f6fb; --panel:#fff; --sunk:#f0eef7;
+  --line:#e0dcec; --ink:#1a1824; --mute:#625d78; --faint:#9a95b0;
+  --accent:#6d43e8; --ok:#0f9d63; --warn:#b06a00; --bad:#d63333;
+  --ok-dim:#d9f5e8; --warn-dim:#fbeed6; --bad-dim:#fbdede; }
+:root[data-theme="dark"] { --void:#0e0d13; --panel:#17161f; --sunk:#121119;
+  --line:#262436; --ink:#e8e6f0; --mute:#8a869c; --faint:#565270;
+  --accent:#a78bfa; --ok:#5ee8a5; --warn:#ffb454; --bad:#ff5c5c;
+  --ok-dim:#163a2c; --warn-dim:#3a2c15; --bad-dim:#3a1a1e; }
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--void);color:var(--ink);font-family:var(--sans);
+  font-size:13px;line-height:1.55;-webkit-font-smoothing:antialiased;padding-bottom:60px}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+.mark{display:inline-flex;align-items:center;gap:7px;font-weight:650;letter-spacing:-.01em}
+.mark svg{display:block}
+.mark small{display:block;font-size:10.5px;font-weight:500;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--faint);margin-top:1px}
+.eyebrow{font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);font-weight:600}
+
+.rail{height:3px;width:100%;background:var(--line)}
+.rail.is-ok{background:var(--ok)} .rail.is-warn{background:var(--warn)}
+.rail.is-bad{background:var(--bad);height:5px}
+.rail.is-hold{height:5px;
+  background:repeating-linear-gradient(90deg,var(--ok) 0 8px,
+    color-mix(in srgb,var(--ok) 38%,var(--panel)) 8px 16px);
+  animation:rail-drift 1.1s linear infinite}
+@keyframes rail-drift{to{background-position:16px 0}}
+
+.pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 8px;
+  border-radius:999px;font-size:11px;font-weight:650;border:1px solid transparent}
+.pill::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.pill.is-ok{color:var(--ok);background:var(--ok-dim);border-color:color-mix(in srgb,var(--ok) 30%,transparent)}
+.pill.is-warn{color:var(--warn);background:var(--warn-dim);border-color:color-mix(in srgb,var(--warn) 30%,transparent)}
+.pill.is-bad{color:var(--bad);background:var(--bad-dim);border-color:color-mix(in srgb,var(--bad) 30%,transparent)}
+.pill.is-hold{color:var(--ok);background:var(--ok-dim);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
+.pill.is-hold::before{border-radius:2px;width:7px;height:7px}
+.pill.is-idle{color:var(--mute);background:var(--sunk);border-color:var(--line)}
+.pill.is-idle::before{background:var(--faint)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
+a{color:var(--accent);text-decoration:none}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+.num,.stat-v,.hero-n{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:6px 13px 6px 11px;
+  border:1px solid var(--line);border-radius:999px;background:var(--panel);
+  color:var(--mute);font-family:var(--sans);font-size:12.5px;line-height:1.5;cursor:pointer}
+.chip b{font-family:var(--mono);font-weight:500;color:var(--ink)}
+.chip .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none}
+.chip .dot.s-warn{background:var(--warn)}
+.chip .dot.s-bad{background:var(--bad)}
+.chip .dot.s-idle{background:var(--faint)}
+.chip .dot.s-hold{background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 28%,transparent)}
+.chip[aria-pressed="true"]{border-color:color-mix(in srgb,var(--accent) 55%,var(--line));
+  background:color-mix(in srgb,var(--accent) 12%,var(--panel))}
+.chip[aria-pressed="true"] b{color:var(--ink)}
+.chip.stale{border-style:dashed}
+.chip.stale b{color:var(--mute)}
+.chip.stale .dot{background:var(--faint);box-shadow:none}
+
+h1.page{font-size:22px;margin:34px 0 4px;letter-spacing:-.02em}
+p.page{color:var(--mute);margin:0 0 26px;max-width:72ch}
+h2.sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--faint);font-weight:650;margin:38px 0 4px}
+p.lede{margin:0 0 14px;color:var(--mute);font-size:13px;max-width:68ch}
+
+.themer{position:fixed;top:14px;right:16px;z-index:5;display:flex;gap:6px}
+.themer button{font:inherit;font-size:11px;padding:4px 10px;border-radius:999px;
+  border:1px solid var(--line);background:var(--panel);color:var(--mute);cursor:pointer}
+
+/* popup mock */
+.pops{display:flex;gap:20px;flex-wrap:wrap}
+.popframe{width:380px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;overflow:hidden;box-shadow:0 8px 28px rgba(0,0,0,.28)}
+@media (prefers-color-scheme:light){.popframe{box-shadow:0 8px 24px rgba(30,20,60,.10)}}
+:root[data-theme="light"] .popframe{box-shadow:0 8px 24px rgba(30,20,60,.10)}
+.popcap{font-family:var(--mono);font-size:11px;color:var(--faint);margin:0 0 7px}
+.pop header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 0}
+.pop .mark{font-size:15px}
+.hero{padding:18px 16px 20px;text-align:center}
+.hero-n{font-size:52px;font-weight:600;line-height:1;letter-spacing:-.03em}
+.hero-n.zero{color:var(--faint)}
+.hero-l{color:var(--mute);font-size:12px;margin-top:4px}
+.hero .pill{margin-top:14px}
+.why{color:var(--faint);font-size:11px;line-height:1.5;margin:8px auto 0;max-width:32ch}
+.now{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.now>div{background:var(--panel);padding:10px 16px}
+.now .k{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);font-weight:600}
+.now .v{font-family:var(--mono);font-size:13px;margin-top:2px}
+.also{padding:8px 16px;border-bottom:1px solid var(--line);font-size:11px;color:var(--faint)}
+.also b{font-family:var(--mono);font-weight:500;color:var(--mute)}
+.pop footer{display:flex;align-items:center;justify-content:space-between;padding:12px 16px 14px}
+.sw{display:inline-flex;align-items:center;gap:9px;font-size:12px;color:var(--ink)}
+.sw.off{color:var(--mute)}
+.track{width:34px;height:20px;border-radius:999px;position:relative;
+  background:color-mix(in srgb,var(--ok) 35%,transparent)}
+.track::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;
+  border-radius:50%;background:var(--ok);transform:translateX(14px)}
+.track.off{background:var(--line)}
+.track.off::after{background:var(--mute);transform:none}
+
+/* dash mock */
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.stat{padding:15px 16px 14px;display:flex;flex-direction:column;gap:2px}
+.stat-k{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);font-weight:650}
+.stat-v{font-size:27px;font-weight:600;line-height:1.15;letter-spacing:-.02em}
+.stat-v small{font-size:15px;color:var(--faint);font-weight:500}
+.stat-note{font-size:12px;color:var(--mute);line-height:1.45;margin-top:5px}
+.stat.good .stat-v{color:var(--ok)} .stat.bad .stat-v{color:var(--bad)}
+.stat.warn .stat-v{color:var(--warn)} .stat.idle .stat-v{color:var(--faint)}
+.stat.truth{border-color:color-mix(in srgb,var(--accent) 45%,var(--line))}
+.stat.truth .stat-k{color:var(--accent)}
+.verdict{display:flex;align-items:flex-start;gap:13px;padding:15px 17px;margin-bottom:14px}
+.verdict .pill{flex:none;margin-top:1px}
+.verdict p{margin:0;font-size:13.5px;line-height:1.55;max-width:76ch}
+.dtop{display:flex;align-items:center;justify-content:space-between;gap:24px;
+  padding:22px 0 20px;flex-wrap:wrap}
+.where{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.where b{color:var(--ink);font-weight:500}
+.dashframe{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--void)}
+.dashframe .inner{padding:0 26px 30px}
+table.feed{width:100%;border-collapse:collapse;font-size:12.5px}
+table.feed th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--faint);font-weight:650;padding:0 12px 7px 0;border-bottom:1px solid var(--line)}
+table.feed td{padding:6px 12px 6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.feed td.t{font-family:var(--mono);color:var(--faint);white-space:nowrap}
+table.feed td.ev{font-family:var(--mono);white-space:nowrap}
+table.feed td.ch{font-family:var(--mono);color:var(--mute);white-space:nowrap}
+tr.sev-bad td.ev{color:var(--bad)} tr.sev-warn td.ev{color:var(--warn)} tr.sev-ok td.ev{color:var(--ok)}
+tr.hi td{background:color-mix(in srgb,var(--warn) 9%,transparent)}
+tr.hi td.ev{font-weight:700}
+.feed-wrap{overflow-x:auto;padding:14px 16px}
+.feed-head{display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  flex-wrap:wrap;margin:0 0 14px}
+.filter{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--mute)}
+.empty{color:var(--faint);font-size:13px;padding:16px 0}
+dl.gloss{margin:0}
+dl.gloss>div{display:grid;grid-template-columns:180px 1fr;gap:20px;padding:11px 0;border-top:1px solid var(--line)}
+dl.gloss dt{font-weight:600;font-size:13px}
+dl.gloss dd{margin:0;color:var(--mute);font-size:13px;line-height:1.55}
+@media(max-width:620px){dl.gloss>div{grid-template-columns:1fr;gap:3px}}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="themer">
+  <button type="button" data-t="light">light</button>
+  <button type="button" data-t="dark">dark</button>
+  <button type="button" data-t="">system</button>
+</div>
+
+<div class="wrap">
+
+<h1 class="page">Unslop &mdash; interface</h1>
+<p class="page">Two surfaces. The popup answers one question about one tab in one
+glance. The dashboard explains every number behind it, for every stream that is
+open. Numbers below are the real <span class="num">gaules</span> soak,
+<span class="num">16:31</span>&ndash;<span class="num">17:07</span>: four midrolls
+about nine minutes apart, <span class="num">851</span> playlist requests,
+<span class="num">726</span> answered with clean video. That build had no segment
+listener and reported no flap count, so both read <em>not measured</em> rather
+than zero.</p>
+
+<h2 class="sec">Popup &mdash; 380px, one tab</h2>
+<p class="lede">The popup describes <strong>the tab it was opened over</strong>,
+never whichever stream polled last. Six states. The rail across the top carries
+the state as thickness, colour and movement together, so it survives a bad
+monitor.</p>
+
+<div class="pops">
+
+  <div>
+    <p class="popcap">covered</p>
+    <div class="popframe pop">
+      <div class="rail is-ok"></div>
+      <header>
+        <span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Unslop</span>
+        <span class="eyebrow">beta</span>
+      </header>
+      <div class="hero">
+        <div class="hero-n">5</div>
+        <div class="hero-l">ad breaks blocked</div>
+        <span class="pill is-ok">covered</span>
+        <p class="why">You're on a clean feed. Ads are replaced before they reach you.</p>
+      </div>
+      <div class="now">
+        <div><div class="k">This tab</div><div class="v">gaules</div></div>
+        <div><div class="k">Quality</div><div class="v">1920x1080@60</div></div>
+      </div>
+      <footer>
+        <span class="sw"><span class="track"></span>On</span>
+        <a href="#">Details &rarr;</a>
+      </footer>
+    </div>
+  </div>
+
+  <div>
+    <p class="popcap">ad break incoming &mdash; the new predictive state</p>
+    <div class="popframe pop">
+      <div class="rail is-hold"></div>
+      <header>
+        <span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Unslop</span>
+        <span class="eyebrow">beta</span>
+      </header>
+      <div class="hero">
+        <div class="hero-n">5</div>
+        <div class="hero-l">ad breaks blocked</div>
+        <span class="pill is-hold">ad break incoming</span>
+        <p class="why">Twitch is lining one up. We spotted it early and we're holding the clean feed &mdash; you shouldn't see the break.</p>
+      </div>
+      <div class="now">
+        <div><div class="k">This tab</div><div class="v">gaules</div></div>
+        <div><div class="k">Quality</div><div class="v">1920x1080@60</div></div>
+      </div>
+      <footer>
+        <span class="sw"><span class="track"></span>On</span>
+        <a href="#">Details &rarr;</a>
+      </footer>
+    </div>
+  </div>
+
+  <div>
+    <p class="popcap">warming up</p>
+    <div class="popframe pop">
+      <div class="rail is-warn"></div>
+      <header>
+        <span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Unslop</span>
+        <span class="eyebrow">beta</span>
+      </header>
+      <div class="hero">
+        <div class="hero-n zero">0</div>
+        <div class="hero-l">ad breaks blocked</div>
+        <span class="pill is-warn">warming up</span>
+        <p class="why">Building a clean feed. Takes about twenty seconds after you open a stream.</p>
+      </div>
+      <div class="now">
+        <div><div class="k">This tab</div><div class="v">gaules</div></div>
+        <div><div class="k">Quality</div><div class="v">640x360@30</div></div>
+      </div>
+      <footer>
+        <span class="sw"><span class="track"></span>On</span>
+        <a href="#">Details &rarr;</a>
+      </footer>
+    </div>
+  </div>
+
+  <div>
+    <p class="popcap">exposed &mdash; the state that has to be unmissable</p>
+    <div class="popframe pop">
+      <div class="rail is-bad"></div>
+      <header>
+        <span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Unslop</span>
+        <span class="eyebrow">beta</span>
+      </header>
+      <div class="hero">
+        <div class="hero-n">5</div>
+        <div class="hero-l">ad breaks blocked</div>
+        <span class="pill is-bad">exposed</span>
+        <p class="why">The clean feed ran short, so Twitch's own stream is going through &mdash; ads included. This usually clears within a few seconds.</p>
+      </div>
+      <div class="now">
+        <div><div class="k">This tab</div><div class="v">gaules</div></div>
+        <div><div class="k">Quality</div><div class="v">640x360@30</div></div>
+      </div>
+      <footer>
+        <span class="sw"><span class="track"></span>On</span>
+        <a href="#">Details &rarr;</a>
+      </footer>
+    </div>
+  </div>
+
+  <div>
+    <p class="popcap">this tab is not a Twitch channel &mdash; no number at all, and never another stream's</p>
+    <div class="popframe pop">
+      <div class="rail"></div>
+      <header>
+        <span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Unslop</span>
+        <span class="eyebrow">beta</span>
+      </header>
+      <div class="hero">
+        <span class="pill is-idle">no stream here</span>
+        <p class="why">This tab isn't a Twitch channel. Open one and Unslop starts on its own.</p>
+      </div>
+      <div class="now">
+        <div><div class="k">This tab</div><div class="v">not Twitch</div></div>
+        <div><div class="k">Quality</div><div class="v">&mdash;</div></div>
+      </div>
+      <div class="also">Covering <b>gaules</b>, <b>nogenerals</b>.</div>
+      <footer>
+        <span class="sw"><span class="track"></span>On</span>
+        <a href="#">Details &rarr;</a>
+      </footer>
+    </div>
+  </div>
+
+  <div>
+    <p class="popcap">switched off</p>
+    <div class="popframe pop">
+      <div class="rail is-bad"></div>
+      <header>
+        <span class="mark"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>Unslop</span>
+        <span class="eyebrow">beta</span>
+      </header>
+      <div class="hero">
+        <span class="pill is-bad">off</span>
+        <p class="why">Unslop is switched off. Twitch is serving you ads normally.</p>
+      </div>
+      <div class="now">
+        <div><div class="k">This tab</div><div class="v">gaules</div></div>
+        <div><div class="k">Quality</div><div class="v">&mdash;</div></div>
+      </div>
+      <footer>
+        <span class="sw off"><span class="track off"></span>Off</span>
+        <a href="#">Details &rarr;</a>
+      </footer>
+    </div>
+  </div>
+
+</div>
+
+<h2 class="sec">Stream selector</h2>
+<p class="lede">Several Twitch tabs can be open, each with its own background
+sessions and its own counters. A stream counts as live while its player is still
+asking for playlists &mdash; never while its tab is visible or unmuted, which say
+nothing about whether anyone is watching. A stopped stream is drawn as
+unfinished, not as broken.</p>
+
+<div style="display:grid;gap:16px;max-width:760px">
+  <div>
+    <p class="popcap">one stream</p>
+    <div class="chips">
+      <button type="button" class="chip" aria-pressed="true"><span class="dot s-ok"></span><b>gaules</b>covered</button>
+    </div>
+  </div>
+  <div>
+    <p class="popcap">a second tab, left running and then abandoned</p>
+    <div class="chips">
+      <button type="button" class="chip" aria-pressed="true"><span class="dot s-ok"></span><b>gaules</b>covered</button>
+      <button type="button" class="chip stale" aria-pressed="false"><span class="dot s-idle"></span><b>nogenerals</b>idle</button>
+    </div>
+  </div>
+  <div>
+    <p class="popcap">a break starting on the stream you are not looking at</p>
+    <div class="chips">
+      <button type="button" class="chip" aria-pressed="true"><span class="dot s-ok"></span><b>gaules</b>covered</button>
+      <button type="button" class="chip" aria-pressed="false"><span class="dot s-hold"></span><b>nogenerals</b>holding</button>
+      <button type="button" class="chip stale" aria-pressed="false"><span class="dot s-idle"></span><b>xqc</b>idle</button>
+    </div>
+  </div>
+</div>
+
+<h2 class="sec">Dashboard &mdash; details page</h2>
+<p class="lede">Opened from &ldquo;Details&rdquo;. Every metric ships with the
+sentence that makes it readable, and the two numbers with harder evidence behind
+them &mdash; and the ones with none &mdash; are framed differently rather than
+just worded differently.</p>
+
+<div class="dashframe">
+  <div class="rail is-ok"></div>
+  <div class="inner">
+
+    <div class="dtop">
+      <span class="mark">
+        <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span>Unslop<small>Twitch Corporate Slop Defender</small></span>
+      </span>
+      <div style="display:flex;align-items:center;gap:14px">
+        <span class="where">showing <b>gaules</b> at <b>1920x1080@60</b></span>
+        <span class="pill is-ok">covered</span>
+      </div>
+    </div>
+
+    <h2 class="sec" style="margin-top:0">Streams open</h2>
+    <p class="lede">Every number on this page belongs to one stream. A stream
+    counts as open while its player is still asking for playlists &mdash; not
+    while its tab is visible or unmuted, which say nothing about whether anyone
+    is watching.</p>
+    <div class="chips">
+      <button type="button" class="chip" aria-pressed="true"><span class="dot s-ok"></span><b>gaules</b>covered</button>
+    </div>
+
+    <div class="card verdict" style="margin-top:26px">
+      <span class="pill is-warn">note</span>
+      <p>5 breaks blocked, 3 left exposed on gaules. Whether any of them played
+      was not measured &mdash; the segment listener is not active in this build,
+      so read nothing into the absence.</p>
+    </div>
+
+    <h2 class="sec">Seeing a break coming</h2>
+    <p class="lede">Before an ad starts, Twitch quietly takes the quality you are
+    watching out of the stream's quality list, forcing the player down. That
+    happens four to twelve seconds before the first ad exists, and it is the only
+    warning anything gives us. When we see it we stop following the player and
+    hold the clean feed instead.</p>
+    <div class="grid">
+      <div class="card stat idle"><span class="stat-k">Right now</span>
+        <span class="stat-v">clear</span>
+        <span class="stat-note">Whether a break is being signalled on this stream
+        at this moment.</span></div>
+      <div class="card stat"><span class="stat-k">Warnings seen</span>
+        <span class="stat-v">4</span>
+        <span class="stat-note">Counted from the recent activity below, which is
+        a rolling window of the last few hundred events &mdash; not the whole
+        session.</span></div>
+    </div>
+
+    <h2 class="sec">Did any slop get through</h2>
+    <p class="lede">Only the first number is measured directly. The other two
+    describe what Twitch offered and what we did about it &mdash; useful, but a
+    step removed from what your eyes actually saw.</p>
+    <div class="grid">
+      <div class="card stat truth idle">
+        <span class="stat-k">Ads that reached your screen</span>
+        <span class="stat-v"><small>not measured</small></span>
+        <span class="stat-note">Segment tracking is not active in this build, so
+        we cannot prove whether an ad played. Do not read this as zero.</span>
+      </div>
+      <div class="card stat good">
+        <span class="stat-k">Ad breaks blocked</span>
+        <span class="stat-v">5</span>
+        <span class="stat-note">Times Twitch put an ad in your stream and we
+        swapped in clean video before the player could fetch it. 70 ad segments
+        in total.</span>
+      </div>
+      <div class="card stat warn">
+        <span class="stat-k">Breaks left exposed</span>
+        <span class="stat-v">3</span>
+        <span class="stat-note">Times we handed Twitch's own playlist through
+        with ads still listed. Exposed is not the same as played &mdash; the
+        player often never reaches for them. 21 ad segments were listed in
+        them.</span>
+      </div>
+    </div>
+
+    <h2 class="sec">Where the video came from</h2>
+    <p class="lede">Unslop does not filter ads out of your stream. It runs its
+    own clean sessions in the background and replaces the playlist wholesale,
+    because a session that has taken an ad is permanently out of step with one
+    that hasn't.</p>
+    <div class="grid">
+      <div class="card stat"><span class="stat-k">Playlists replaced</span>
+        <span class="stat-v">726</span>
+        <span class="stat-note">Requests we answered with clean video.</span></div>
+      <div class="card stat warn"><span class="stat-k">Passed through</span>
+        <span class="stat-v">125</span>
+        <span class="stat-note">Requests we let Twitch answer untouched. Each one
+        is an opening; most land when no ad is running.</span></div>
+      <div class="card stat good"><span class="stat-k">Clean sessions ready</span>
+        <span class="stat-v">4<small>/4</small></span>
+        <span class="stat-note">Background sessions currently holding usable
+        video. At zero we have nothing to swap in and you get Twitch's stream as-is.</span></div>
+      <div class="card stat"><span class="stat-k">Clean segments held</span>
+        <span class="stat-v">890</span>
+        <span class="stat-note">The buffer we can splice from.</span></div>
+    </div>
+
+    <h2 class="sec">Why we ever miss</h2>
+    <p class="lede">Two different failures, and telling them apart is the whole
+    game. A shortage means the background sessions had nothing clean. A reset
+    means we threw our own buffer away &mdash; usually chasing the player as it
+    changes quality &mdash; and were caught cold. The second one is our bug, not
+    Twitch's doing.</p>
+    <div class="grid">
+      <div class="card stat idle"><span class="stat-k">Sessions retired</span>
+        <span class="stat-v">0</span>
+        <span class="stat-note">A background session took an ad. Once that happens
+        its video no longer lines up with the rest, so it's dropped and replaced.</span></div>
+      <div class="card stat"><span class="stat-k">Quality changes followed</span>
+        <span class="stat-v">46</span>
+        <span class="stat-note">Each one currently resets the buffer, which takes
+        ~20s to refill.</span></div>
+      <div class="card stat idle"><span class="stat-k">Quality flapping</span>
+        <span class="stat-v"><small>&mdash;</small></span>
+        <span class="stat-note">Not reported by this build. Do not read the dash
+        as zero.</span></div>
+    </div>
+
+    <h2 class="sec">Across every stream</h2>
+    <p class="lede">Three numbers that have no single stream to belong to. The
+    background sessions come out of one shared budget, so a second stream costs
+    the first one donors.</p>
+    <div class="grid">
+      <div class="card stat"><span class="stat-k">Streams open</span>
+        <span class="stat-v">1</span>
+        <span class="stat-note">Players still asking us for playlists.</span></div>
+      <div class="card stat"><span class="stat-k">Background sessions in use</span>
+        <span class="stat-v">4<small>/12</small></span>
+        <span class="stat-note">Shared across every open stream and capped, so
+        this never turns into load on Twitch.</span></div>
+      <div class="card stat idle"><span class="stat-k">Unrecognised streams</span>
+        <span class="stat-v">0</span>
+        <span class="stat-note">Playlists we could not match to a known quality,
+        so we never learned which channel they were for. Passed through untouched
+        on purpose &mdash; guessing froze playback.</span></div>
+    </div>
+
+    <h2 class="sec">Was there anything to block</h2>
+    <p class="lede">A separate probe session joins the channel on a loop purely
+    to see whether ads are on offer. It is not part of your video. It rejoins
+    constantly, and joining is what draws ads, so <strong>it reports far more ads
+    than a normal viewer would ever see</strong>. Read it as &ldquo;ads exist on
+    this channel&rdquo;, never as &ldquo;ads you avoided&rdquo;, and never add it
+    to anything above.</p>
+    <div class="grid">
+      <div class="card stat"><span class="stat-k">Probe: breaks seen</span>
+        <span class="stat-v">48</span>
+        <span class="stat-note">Ad breaks the probe walked into.</span></div>
+      <div class="card stat"><span class="stat-k">Probe: joins</span>
+        <span class="stat-v">48</span>
+        <span class="stat-note">If these two are equal, every break was a join ad
+        &mdash; which says nothing about a viewer sitting still.</span></div>
+    </div>
+
+    <h2 class="sec">Recent activity</h2>
+    <div class="feed-head">
+      <p class="lede" style="margin:0">Newest first. Every stream, unless you narrow it.</p>
+      <label class="filter"><input type="checkbox"> Only gaules</label>
+    </div>
+    <div class="card feed-wrap">
+      <table class="feed">
+        <thead><tr><th>Time</th><th>Stream</th><th>Event</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr class="sev-warn"><td class="t">17:07:41</td><td class="ch">gaules</td><td class="ev">quality change</td><td>1920x1080@60 to 640x360@30, 2 sessions restarted</td></tr>
+          <tr class="sev-ok"><td class="t">17:06:58</td><td class="ch">gaules</td><td class="ev">break over</td><td>full quality list back after 24s</td></tr>
+          <tr class="sev-ok"><td class="t">17:06:52</td><td class="ch">gaules</td><td class="ev">blocked</td><td>5 ad segments, rewrite, served through a collapsed quality list</td></tr>
+          <tr class="sev-ok"><td class="t">17:06:47</td><td class="ch">gaules</td><td class="ev">blocked</td><td>4 ad segments, rewrite, served through a collapsed quality list</td></tr>
+          <tr class="sev-bad"><td class="t">17:06:41</td><td class="ch">gaules</td><td class="ev">exposed</td><td>3 ad segments, pass_cold</td></tr>
+          <tr class="hi sev-warn"><td class="t">17:06:34</td><td class="ch">gaules</td><td class="ev">ad break incoming</td><td>1920x1080@60 vanished from the quality list (12 down to 2). The ad itself normally exists 4-12s later; holding the clean feed instead of following the player down.</td></tr>
+          <tr><td class="t">17:06:33</td><td class="ch">gaules</td><td class="ev">quality list</td><td>2 qualities offered</td></tr>
+          <tr class="sev-warn"><td class="t">17:04:12</td><td class="ch">gaules</td><td class="ev">probe saw an ad</td><td>7 segments — the probe rejoins on a loop, so this overstates badly</td></tr>
+          <tr class="hi sev-warn"><td class="t">16:57:12</td><td class="ch">gaules</td><td class="ev">ad break incoming</td><td>1920x1080@60 vanished from the quality list (12 down to 2). The ad itself normally exists 4-12s later; holding the clean feed instead of following the player down.</td></tr>
+          <tr class="sev-ok"><td class="t">16:31:04</td><td class="ch">gaules</td><td class="ev">locked on</td><td>1920x1080@60 — background sessions tuned to match</td></tr>
+          <tr class="sev-ok"><td class="t">16:31:02</td><td class="ch">gaules</td><td class="ev">stream opened</td><td>1 open now</td></tr>
+          <tr class="sev-ok"><td class="t">16:31:01</td><td class="ch">&mdash;</td><td class="ev">unslop started</td><td>4 background sessions per stream, 12 shared</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2 class="sec">How this works</h2>
+    <p class="lede">Twitch stitches ads into the same video stream as the
+    content, from the same servers, under the same names. There is no request to
+    block.</p>
+    <dl class="gloss">
+      <div><dt>The swap</dt><dd>Unslop opens a few extra sessions to the same
+      channel in the background. When Twitch drops an ad into yours, at least one
+      of those is usually still carrying clean video, and we answer your player
+      with that instead.</dd></div>
+      <div><dt>Why not just delete the ads</dt><dd>Ads replace content rather than
+      delaying it, and Twitch re-cuts the stream where the ad break ended. A
+      session that takes an ad comes back about 1.4 seconds out of step and never
+      recovers, so its own video can't be stitched back onto the part you
+      missed.</dd></div>
+      <div><dt>How we see a break coming</dt><dd>Seconds before an ad starts, the
+      quality you are watching disappears from the stream's quality list and the
+      player is pushed down to 360p. Nothing else announces a break. When it
+      happens we stop following the player and keep serving the quality we
+      already have buffered, which is the difference between covering a break and
+      walking into it.</dd></div>
+      <div><dt>Why it needs a moment after you join</dt><dd>The background
+      sessions have to build up a few seconds of video before there is anything to
+      swap in. Until then you get Twitch's stream, ads included &mdash; a visible
+      ad beats a black screen.</dd></div>
+      <div><dt>Why quality changes cost you</dt><dd>The buffer is per-quality.
+      Changing quality throws it away and starts again, and an ad break is exactly
+      when the player is most likely to change quality.</dd></div>
+      <div><dt>Two streams at once</dt><dd>Each open stream gets its own
+      background sessions and its own counters, out of one shared budget. Leave a
+      stream paused or closed and it stops asking for playlists; half a minute
+      later its sessions are released to whoever is still watching.</dd></div>
+    </dl>
+
+  </div>
+</div>
+
+</div>
+
+<script>
+// Local only. Lets a reviewer force either theme without touching the OS.
+for (const b of document.querySelectorAll(".themer button")) {
+  b.addEventListener("click", () => {
+    if (b.dataset.t) document.documentElement.dataset.theme = b.dataset.t;
+    else delete document.documentElement.dataset.theme;
+  });
+}
+</script>

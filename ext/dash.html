@@ -1,0 +1,414 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Unslop — details</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+  body { padding-bottom: 64px; }
+
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 24px; }
+
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px; padding: 26px 0 22px; flex-wrap: wrap;
+  }
+  .mark { font-size: 19px; }
+  .mark small { display: block; font-size: 10.5px; font-weight: 500;
+                letter-spacing: .1em; text-transform: uppercase;
+                color: var(--faint); margin-top: 1px; }
+  .top-right { display: flex; align-items: center; gap: 14px; }
+  .where { font-family: var(--mono); font-size: 12px; color: var(--mute); }
+  .where b { color: var(--ink); font-weight: 500; }
+
+  section { margin-top: 34px; }
+  section > h2 {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--faint); font-weight: 650; margin: 0 0 4px;
+  }
+  section > .lede {
+    margin: 0 0 14px; color: var(--mute); font-size: 13px; max-width: 68ch;
+  }
+
+  /* The stream strip sits above everything it scopes, because every number
+   * below it belongs to exactly one of these and to none of the others. */
+  section.streams { margin-top: 0; }
+  section.streams .lede { margin-bottom: 10px; }
+
+  .grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); }
+
+  /* Every metric ships with the sentence that makes it readable. That gloss is
+   * the reason this page exists — the raw counters were already available and
+   * were useless without it. */
+  .stat { padding: 15px 16px 14px; display: flex; flex-direction: column; gap: 2px; }
+  .stat-k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+            color: var(--faint); font-weight: 650; }
+  .stat-v { font-size: 27px; font-weight: 600; line-height: 1.15;
+            letter-spacing: -0.02em; }
+  .stat-v small { font-size: 15px; color: var(--faint); font-weight: 500; }
+  .stat-note { font-size: 12px; color: var(--mute); line-height: 1.45; margin-top: 5px; }
+  .stat.good .stat-v { color: var(--ok); }
+  .stat.bad  .stat-v { color: var(--bad); }
+  .stat.warn .stat-v { color: var(--warn); }
+  .stat.idle .stat-v { color: var(--faint); }
+
+  /* The one number with a different epistemic status gets a different frame,
+   * not just different copy: it is measured, the ones beside it are inferred. */
+  .stat.truth { border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); }
+  .stat.truth .stat-k { color: var(--accent); }
+
+  .verdict {
+    display: flex; align-items: flex-start; gap: 13px;
+    padding: 15px 17px; margin-bottom: 14px;
+  }
+  .verdict .pill { flex: none; margin-top: 1px; }
+  .verdict p { margin: 0; font-size: 13.5px; line-height: 1.55; max-width: 76ch; }
+
+  table.feed { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  table.feed th {
+    text-align: left; font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--faint); font-weight: 650;
+    padding: 0 12px 7px 0; border-bottom: 1px solid var(--line);
+  }
+  table.feed td { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line);
+                  vertical-align: top; }
+  table.feed td.t { font-family: var(--mono); color: var(--faint); white-space: nowrap; }
+  table.feed td.ev { font-family: var(--mono); white-space: nowrap; }
+  table.feed td.ch { font-family: var(--mono); color: var(--mute); white-space: nowrap; }
+  table.feed tr.sev-bad  td.ev { color: var(--bad); }
+  table.feed tr.sev-warn td.ev { color: var(--warn); }
+  table.feed tr.sev-ok   td.ev { color: var(--ok); }
+  /* The ad predictor is the single most informative line in the stream: it is
+   * the only entry that names something before it happened. */
+  table.feed tr.hi td { background: color-mix(in srgb, var(--warn) 9%, transparent); }
+  table.feed tr.hi td.ev { font-weight: 700; }
+  .feed-wrap { overflow-x: auto; }
+  .empty { color: var(--faint); font-size: 13px; padding: 16px 0; }
+
+  .feed-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 16px; flex-wrap: wrap; margin: 0 0 14px;
+  }
+  .filter { display: inline-flex; align-items: center; gap: 7px;
+            font-size: 12px; color: var(--mute); cursor: pointer; user-select: none; }
+
+  dl.gloss { margin: 0; display: grid; gap: 0; }
+  dl.gloss > div { display: grid; grid-template-columns: 180px 1fr; gap: 20px;
+                   padding: 11px 0; border-top: 1px solid var(--line); }
+  dl.gloss dt { font-weight: 600; font-size: 13px; }
+  dl.gloss dd { margin: 0; color: var(--mute); font-size: 13px; line-height: 1.55; }
+
+  .btn {
+    font: inherit; font-weight: 600; color: var(--ink);
+    background: var(--sunk); border: 1px solid var(--line);
+    border-radius: 8px; padding: 8px 15px; cursor: pointer;
+  }
+  .btn:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .diag-note { display: block; margin-top: 9px; font-size: 12px;
+               color: var(--faint); max-width: 66ch; }
+  @media (max-width: 620px) {
+    dl.gloss > div { grid-template-columns: 1fr; gap: 3px; }
+  }
+</style>
+
+<div class="rail" id="rail"></div>
+
+<div class="wrap">
+
+  <header class="top">
+    <span class="mark">
+      <svg width="20" height="20" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z"
+              fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <span>Unslop<small>Twitch Corporate Slop Defender</small></span>
+    </span>
+    <div class="top-right">
+      <span class="where">showing <b id="chan">—</b> at <b id="rend">—</b></span>
+      <span class="pill is-idle" id="state">starting up</span>
+    </div>
+  </header>
+
+  <section class="streams">
+    <h2>Streams open</h2>
+    <p class="lede">
+      Every number on this page belongs to one stream. A stream counts as open
+      while its player is still asking for playlists &mdash; not while its tab is
+      visible or unmuted, which say nothing about whether anyone is watching.
+    </p>
+    <div class="chips" id="chips" role="group" aria-label="Choose a stream"></div>
+    <div class="empty" id="chipsEmpty">No Twitch stream is playing. Open one and it appears here.</div>
+  </section>
+
+  <section>
+    <div class="card verdict">
+      <span class="pill is-idle" id="vpill">…</span>
+      <p id="verdict">Waiting for a stream.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>Seeing a break coming</h2>
+    <p class="lede">
+      Before an ad starts, Twitch quietly takes the quality you are watching out
+      of the stream's quality list, forcing the player down. That happens four to
+      twelve seconds before the first ad exists, and it is the only warning
+      anything gives us. When we see it we stop following the player and hold the
+      clean feed instead.
+    </p>
+    <div class="grid">
+      <div class="card stat" id="s-hold">
+        <span class="stat-k">Right now</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Whether a break is being signalled on this
+          stream at this moment.</span>
+      </div>
+      <div class="card stat" id="s-warned">
+        <span class="stat-k">Warnings seen</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Counted from the recent activity below, which is
+          a rolling window of the last few hundred events &mdash; not the whole
+          session.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Did any slop get through</h2>
+    <p class="lede">
+      Only the first number is measured directly. The other two describe what
+      Twitch offered and what we did about it &mdash; useful, but a step removed
+      from what your eyes actually saw.
+    </p>
+    <div class="grid">
+      <div class="card stat truth" id="s-reached">
+        <span class="stat-k">Ads that reached your screen</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Ad segments the player actually downloaded. This
+          is the only hard proof an ad played; everything else is inference.</span>
+      </div>
+      <div class="card stat" id="s-blocked">
+        <span class="stat-k">Ad breaks blocked</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Times Twitch put an ad in your stream and we
+          swapped in clean video before the player could fetch it.</span>
+      </div>
+      <div class="card stat" id="s-exposed">
+        <span class="stat-k">Breaks left exposed</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Times we handed Twitch's own playlist through
+          with ads still listed. Exposed is not the same as played &mdash; the
+          player often never reaches for them.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Where the video came from</h2>
+    <p class="lede">
+      Unslop does not filter ads out of your stream. It runs its own clean
+      sessions in the background and replaces the playlist wholesale, because a
+      session that has taken an ad is permanently out of step with one that
+      hasn't.
+    </p>
+    <div class="grid">
+      <div class="card stat" id="s-served">
+        <span class="stat-k">Playlists replaced</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Requests we answered with clean video.</span>
+      </div>
+      <div class="card stat" id="s-pass">
+        <span class="stat-k">Passed through</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Requests we let Twitch answer untouched. Each
+          one is an opening; most land when no ad is running.</span>
+      </div>
+      <div class="card stat" id="s-grid">
+        <span class="stat-k">Clean sessions ready</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Background sessions currently holding usable
+          video. At zero we have nothing to swap in and you get Twitch's stream
+          as-is.</span>
+      </div>
+      <div class="card stat" id="s-held">
+        <span class="stat-k">Clean segments held</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">The buffer we can splice from.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Why we ever miss</h2>
+    <p class="lede">
+      Two different failures, and telling them apart is the whole game. A
+      shortage means the background sessions had nothing clean. A reset means we
+      threw our own buffer away &mdash; usually chasing the player as it changes
+      quality &mdash; and were caught cold. The second one is our bug, not
+      Twitch's doing.
+    </p>
+    <div class="grid">
+      <div class="card stat" id="s-regrid">
+        <span class="stat-k">Sessions retired</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">A background session took an ad. Once that
+          happens its video no longer lines up with the rest, so it's dropped
+          and replaced.</span>
+      </div>
+      <div class="card stat" id="s-rebind">
+        <span class="stat-k">Quality changes followed</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Each one currently resets the buffer, which
+          takes ~20s to refill.</span>
+      </div>
+      <div class="card stat" id="s-flap">
+        <span class="stat-k">Quality flapping</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Changes that reversed within seconds. High
+          numbers here mean the resets above were wasted.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Across every stream</h2>
+    <p class="lede">
+      Three numbers that have no single stream to belong to. The background
+      sessions come out of one shared budget, so a second stream costs the first
+      one donors.
+    </p>
+    <div class="grid">
+      <div class="card stat" id="s-pools">
+        <span class="stat-k">Streams open</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Players still asking us for playlists.</span>
+      </div>
+      <div class="card stat" id="s-budget">
+        <span class="stat-k">Background sessions in use</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Shared across every open stream and capped, so
+          this never turns into load on Twitch.</span>
+      </div>
+      <div class="card stat" id="s-unk">
+        <span class="stat-k">Unrecognised streams</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Playlists we could not match to a known quality,
+          so we never learned which channel they were for. Passed through
+          untouched on purpose &mdash; guessing froze playback.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Was there anything to block</h2>
+    <p class="lede">
+      A separate probe session joins the channel on a loop purely to see whether
+      ads are on offer. It is not part of your video. It rejoins constantly, and
+      joining is what draws ads, so <strong>it reports far more ads than a normal
+      viewer would ever see</strong>. Read it as "ads exist on this channel",
+      never as "ads you avoided", and never add it to anything above.
+    </p>
+    <div class="grid">
+      <div class="card stat" id="s-cbrk">
+        <span class="stat-k">Probe: breaks seen</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">Ad breaks the probe walked into.</span>
+      </div>
+      <div class="card stat" id="s-cjoin">
+        <span class="stat-k">Probe: joins</span>
+        <span class="stat-v">—</span>
+        <span class="stat-note">If these two are equal, every break was a
+          join ad &mdash; which says nothing about a viewer sitting still.</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Recent activity</h2>
+    <div class="feed-head">
+      <p class="lede" style="margin:0">Newest first. Every stream, unless you narrow it.</p>
+      <label class="filter">
+        <input type="checkbox" id="onlyThis">
+        <span id="onlyThisLab">Only this stream</span>
+      </label>
+    </div>
+    <div class="card feed-wrap" style="padding: 14px 16px;">
+      <table class="feed">
+        <thead><tr><th>Time</th><th>Stream</th><th>Event</th><th>Detail</th></tr></thead>
+        <tbody id="feed"></tbody>
+      </table>
+      <div class="empty" id="feedEmpty">Nothing yet.</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>How this works</h2>
+    <p class="lede">
+      Twitch stitches ads into the same video stream as the content, from the
+      same servers, under the same names. There is no request to block.
+    </p>
+    <dl class="gloss">
+      <div>
+        <dt>The swap</dt>
+        <dd>Unslop opens a few extra sessions to the same channel in the
+          background. When Twitch drops an ad into yours, at least one of those
+          is usually still carrying clean video, and we answer your player with
+          that instead.</dd>
+      </div>
+      <div>
+        <dt>Why not just delete the ads</dt>
+        <dd>Ads replace content rather than delaying it, and Twitch re-cuts the
+          stream where the ad break ended. A session that takes an ad comes back
+          about 1.4 seconds out of step and never recovers, so its own video
+          can't be stitched back onto the part you missed.</dd>
+      </div>
+      <div>
+        <dt>How we see a break coming</dt>
+        <dd>Seconds before an ad starts, the quality you are watching disappears
+          from the stream's quality list and the player is pushed down to 360p.
+          Nothing else announces a break. When it happens we stop following the
+          player and keep serving the quality we already have buffered, which is
+          the difference between covering a break and walking into it.</dd>
+      </div>
+      <div>
+        <dt>Why it needs a moment after you join</dt>
+        <dd>The background sessions have to build up a few seconds of video
+          before there is anything to swap in. Until then you get Twitch's
+          stream, ads included &mdash; a visible ad beats a black screen.</dd>
+      </div>
+      <div>
+        <dt>Why quality changes cost you</dt>
+        <dd>The buffer is per-quality. Changing quality throws it away and
+          starts again, and an ad break is exactly when the player is most
+          likely to change quality.</dd>
+      </div>
+      <div>
+        <dt>Two streams at once</dt>
+        <dd>Each open stream gets its own background sessions and its own
+          counters, out of one shared budget. Leave a stream paused or closed and
+          it stops asking for playlists; half a minute later its sessions are
+          released to whoever is still watching.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section>
+    <h2>Reporting a problem</h2>
+    <p class="lede">
+      If you saw an ad, or playback broke, save this file and send it with your
+      report. Without it a report is just &ldquo;something happened earlier&rdquo;
+      and there is nothing to check it against.
+    </p>
+    <div class="card" style="padding: 15px 17px;">
+      <button id="diag" class="btn">Save diagnostics</button>
+      <span id="diagNote" class="diag-note">
+        Roughly the last hour: ad breaks, what we served, quality changes,
+        errors. It names the channels you watched. No account details, no
+        cookies, no browsing outside Twitch.
+      </span>
+    </div>
+  </section>
+
+</div>
+
+<script src="dash.js"></script>

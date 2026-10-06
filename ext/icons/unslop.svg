@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Shield with the slot knocked clean through, not filled.
+       A knocked-out slot reads on light AND dark browser chrome, because it
+       takes whatever is behind it; a second fill colour would only work on one.
+       Single evenodd path so it stays one shape down at 16px. -->
+  <path fill="#8b5cf6" fill-rule="evenodd" d="
+    M64 3 L120 24 L120 62 C120 93 98 117 64 127 C30 117 8 93 8 62 L8 24 Z
+    M38 56 h52 a8 8 0 0 1 0 16 h-52 a8 8 0 0 1 0-16 Z"/>
+</svg>

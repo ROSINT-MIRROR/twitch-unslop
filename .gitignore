@@ -1,0 +1,10 @@
+data/
+browser/profile/
+mitm/ca/
+driver/venv/
+__pycache__/
+*.pyc
+*.log
+.hunt_session
+.scratch/
+dist/

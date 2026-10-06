@@ -1,0 +1,51 @@
+{
+  "manifest_version": 2,
+  "name": "Unslop",
+  "version": "0.1.0",
+  "description": "Replaces Twitch's server-inserted ads with clean video. Opens a few extra background sessions to the same channel to source it.",
+
+  "browser_specific_settings": {
+    "gecko": { "id": "unslop@science.local", "strict_min_version": "115.0" }
+  },
+
+  "icons": {
+    "16": "icons/unslop-16.png",
+    "32": "icons/unslop-32.png",
+    "48": "icons/unslop-48.png",
+    "96": "icons/unslop-96.png",
+    "128": "icons/unslop-128.png"
+  },
+
+  "permissions": [
+    "webRequest",
+    "webRequestBlocking",
+    "storage",
+    "*://*.ttvnw.net/*",
+    "*://*.hls.live-video.net/*",
+    "*://gql.twitch.tv/*",
+    "*://*.twitch.tv/*",
+    "http://127.0.0.1/*"
+  ],
+
+  "background": {
+    "scripts": ["core.js", "background.js", "badge.js"],
+    "persistent": true
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["*://*.twitch.tv/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "browser_action": {
+    "default_popup": "popup.html",
+    "default_title": "Unslop",
+    "default_icon": {
+      "16": "icons/unslop-16.png",
+      "32": "icons/unslop-32.png"
+    }
+  }
+}

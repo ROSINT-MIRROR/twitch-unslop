@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>unslop pool</title>
+<!--
+  The pool's host document. Never visible; it exists because an MV3 service
+  worker is torn down after ~30s idle and the donor pool is a set of long-lived
+  polling loops with in-memory state (the PDT grid) that cannot survive that.
+
+  There is deliberately nothing in here. The work happens in pool.js, a real
+  Worker — which is what makes the offscreen `WORKERS` reason honest, and which
+  also enforces core.js's own contract: that file may name no extension API,
+  and a worker scope has none to name.
+-->
+<script src="offscreen.js"></script>

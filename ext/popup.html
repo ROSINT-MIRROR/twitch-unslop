@@ -1,0 +1,135 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Unslop</title>
+<link rel="stylesheet" href="ui.css">
+<style>
+  body { width: 380px; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px 0;
+  }
+  .mark { font-size: 15px; }
+
+  /* The hero is the whole point of this surface: one number, read in under a
+   * second, with the state it was measured under directly beneath it. */
+  .hero { padding: 18px 16px 20px; text-align: center; }
+  .hero-n {
+    font-size: 52px; font-weight: 600; line-height: 1;
+    letter-spacing: -0.03em; color: var(--ink);
+  }
+  .hero-n.zero { color: var(--faint); }
+  .hero-l { color: var(--mute); font-size: 12px; margin-top: 4px; }
+  .hero .pill { margin-top: 14px; }
+  /* With no channel under the popup there is no number to show. Hiding it beats
+   * printing a zero that belongs to nothing. */
+  #tally[hidden] { display: none; }
+  #tally[hidden] + .pill { margin-top: 4px; }
+
+  .why {
+    color: var(--faint); font-size: 11px; line-height: 1.5;
+    margin: 8px auto 0; max-width: 32ch;
+  }
+
+  .now {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 1px;
+    background: var(--line);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .now > div { background: var(--panel); padding: 10px 16px; }
+  .now .k { font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+            color: var(--faint); font-weight: 600; }
+  .now .v { font-family: var(--mono); font-size: 13px; margin-top: 2px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Other streams exist, and their numbers are not this stream's. Name them,
+   * count them, send the reader to the dashboard for the rest. */
+  .also {
+    padding: 8px 16px; border-bottom: 1px solid var(--line);
+    font-size: 11px; color: var(--faint);
+  }
+  .also b { font-family: var(--mono); font-weight: 500; color: var(--mute); }
+  .also[hidden] { display: none; }
+
+  footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 14px;
+  }
+
+  /* Looks interactive, and reads as on/off without needing the word. */
+  .sw { display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+        user-select: none; font-size: 12px; color: var(--mute); }
+  .sw input { position: absolute; opacity: 0; width: 0; height: 0; }
+  .track {
+    width: 34px; height: 20px; border-radius: 999px;
+    background: var(--line); position: relative; transition: background .18s;
+  }
+  .track::after {
+    content: ""; position: absolute; top: 3px; left: 3px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--mute); transition: transform .18s, background .18s;
+  }
+  .sw input:checked + .track { background: color-mix(in srgb, var(--ok) 35%, transparent); }
+  .sw input:checked + .track::after { transform: translateX(14px); background: var(--ok); }
+  .sw input:focus-visible + .track { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .sw input:checked ~ .lab { color: var(--ink); }
+
+  .err {
+    display: none; margin: 12px 16px 0; padding: 8px 10px;
+    background: var(--bad-dim); color: var(--bad);
+    border-radius: 8px; font-family: var(--mono); font-size: 11px;
+    word-break: break-all;
+  }
+  .err.on { display: block; }
+</style>
+
+<div class="rail" id="rail"></div>
+
+<header>
+  <span class="mark">
+    <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M8 1 2.5 3.2v4.4c0 3.3 2.3 6 5.5 7.2 3.2-1.2 5.5-3.9 5.5-7.2V3.2Z"
+            fill="none" stroke="currentColor" stroke-width="1.5"
+            stroke-linejoin="round"/>
+      <path d="M4.4 9.6h7.2" stroke="currentColor" stroke-width="1.6"
+            stroke-linecap="round"/>
+    </svg>
+    Unslop
+  </span>
+  <span class="eyebrow">beta</span>
+</header>
+
+<div class="hero">
+  <div id="tally">
+    <div class="hero-n zero" id="count">0</div>
+    <div class="hero-l" id="countLabel">ad breaks blocked</div>
+  </div>
+  <span class="pill is-idle" id="state" role="status">starting up</span>
+  <p class="why" id="why">Checking this tab.</p>
+</div>
+
+<div class="now">
+  <div>
+    <div class="k">This tab</div>
+    <div class="v" id="chan">&mdash;</div>
+  </div>
+  <div>
+    <div class="k">Quality</div>
+    <div class="v" id="rend">&mdash;</div>
+  </div>
+</div>
+
+<div class="also" id="also" hidden></div>
+
+<div class="err" id="err"></div>
+
+<footer>
+  <label class="sw" title="Switches Unslop off for every stream, not just this one.">
+    <input type="checkbox" id="on" checked>
+    <span class="track"></span>
+    <span class="lab" id="onLab">On</span>
+  </label>
+  <a href="#" id="adv">Details &rarr;</a>
+</footer>
+
+<script src="popup.js"></script>

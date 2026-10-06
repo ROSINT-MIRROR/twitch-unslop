@@ -1,0 +1,1 @@
+../ext/badge.js
