@@ -54,6 +54,29 @@ Browser extension:
 node ext/selftest.mjs <channel>   # splice logic only, no browser
 ```
 
+## Install (Firefox)
+
+Download the signed extension from the latest release:
+
+<https://github.com/ROSINT-MIRROR/twitch-unslop/releases/latest/download/twitch-unslop.xpi>
+
+It is signed by Mozilla through the unlisted channel, so it installs on normal
+release Firefox: open that `.xpi` link in Firefox and accept the install prompt.
+After installing, the toolbar button opens the popup; open a Twitch channel and
+it runs its own donor pool.
+
+Verify the download (release `v0.1.0`):
+
+```
+sha256  23b64b3a90fea8d9d76f0fd6c3fbefad4d4888047b541106c6f295d62ba79623
+```
+
+No store listing is involved — the add-on is self-distributed, not published on
+addons.mozilla.org. If you build your own unsigned `.xpi` with `ext/build.sh`
+instead, it only loads on Firefox Developer Edition / Nightly / unbranded-ESR
+with `xpinstall.signatures.required=false`, or temporarily via
+`about:debugging#/runtime/this-firefox` -> Load Temporary Add-on.
+
 Passive browser tap (mitmproxy):
 
 ```sh

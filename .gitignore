@@ -8,3 +8,5 @@ __pycache__/
 .hunt_session
 .scratch/
 dist/
+.secrets/
+ext/.amo-upload-uuid
